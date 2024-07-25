@@ -62,6 +62,8 @@ int main(int argc, char *argv[]) {
     int ret = read(server_fd, &status, sizeof(int));
     if (ret < 0)
         die("reading response failed: %m");
+    if (ret == 0)
+        die("server closed connection");
     if (ret != sizeof(int))
         die("unexpected response size");
     if (WIFEXITED(status)){
