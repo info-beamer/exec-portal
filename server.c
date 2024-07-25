@@ -1,15 +1,30 @@
 #include "shared.h"
 
 #if __has_include("linux/close_range.h") 
+
 #include <linux/close_range.h>
 static void close_fd_range(int lo, int hi) {
    close_range(lo, hi, 0);
 }
+
+#elif defined(FORCE_CLOSE_RANGE)
+
+#ifndef SYS_close_range
+#define SYS_close_range 436
+#warning using hard coded close_range syscall number
+#endif
+
+static int close_fd_range(unsigned int first, unsigned int last) {
+	return syscall(SYS_close_range, first, last, 0);
+}
+
 #else
+
 static void close_fd_range(int lo, int hi) {
     for (int i = lo; i <= hi; i++)
         close(i);
 }
+
 #endif
 
 #ifndef SYS_pidfd_open
