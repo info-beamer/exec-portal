@@ -75,6 +75,9 @@ static int process_child(int our_argc, char *our_argv[], int client_fd) {
     }
     argv[argc] = NULL;
 
+    if (argc == 0)
+        die("nothing to execute");
+
     int fds[MAX_FDS];
     int received = read(client_fd, &fds, sizeof(fds));
     if (received < 0 || (received % sizeof(int)) != 0)
