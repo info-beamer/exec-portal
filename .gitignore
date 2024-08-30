@@ -1,4 +1,4 @@
-server
-client
+portal-spawner
+portal-exec
 *.sock
 *.o

@@ -19,8 +19,8 @@
 #include <sys/resource.h>
 
 
-#ifndef SOCKET_NAME
-#define SOCKET_NAME "server.sock"
+#ifndef PORTAL_NAME
+#define PORTAL_NAME "portal.sock"
 #endif
 
 #ifndef SOCKET_PERM
@@ -83,26 +83,6 @@ static char *buf_mem(buf_t *buf) {
 
 static int buf_fill(buf_t *buf) {
     return buf->fill;
-}
-
-static const char *buf_lookup_kv(buf_t *buf, const char *key) {
-    int key_len = strlen(key);
-    int offset = 0;
-    while (offset < buf->fill) {
-        const char *k = buf->buf + offset;
-        while (offset < buf->fill && buf->buf[offset] != '\0')
-            offset++;
-        if (k[0] == '\0')
-            return NULL;
-        offset++;
-        const char *v = buf->buf + offset;
-        while (offset < buf->fill && buf->buf[offset] != '\0')
-            offset++;
-        if (offset < buf->fill && !strncmp(k, key, key_len))
-            return v;
-        offset++;
-    }
-    return NULL;
 }
 
 static const char *buf_iter_first(buf_t *buf) {

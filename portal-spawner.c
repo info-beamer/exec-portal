@@ -191,8 +191,9 @@ static void sig_done(int signo) {
 }
 
 int main(int argc, char *argv[]) {
-    if (unlink(SOCKET_NAME) < 0 && errno != ENOENT)
-        die("cannot unlink existing socket %s: %m", SOCKET_NAME);
+    const char *portal_name = getenv("PORTAL_NAME") ?: PORTAL_NAME;
+    if (unlink(portal_name) < 0 && errno != ENOENT)
+        die("cannot unlink existing socket %s: %m", portal_name);
 
     struct rlimit lim = { .rlim_cur = 1024, .rlim_max = 1024 };
     if (setrlimit(RLIMIT_NOFILE, &lim) < 0)
@@ -220,12 +221,12 @@ int main(int argc, char *argv[]) {
     memset(&name, 0, sizeof(name));
 
     name.sun_family = AF_UNIX;
-    strncpy(name.sun_path, SOCKET_NAME, sizeof(name.sun_path) - 1);
+    strncpy(name.sun_path, portal_name, sizeof(name.sun_path) - 1);
 
     if (bind(listen_fd, (const struct sockaddr *)&name, sizeof(name)) == -1)
         die("bind failed: %m");
 
-    if (fchmod(listen_fd, SOCKET_PERM) < 0)
+    if (fchmod(listen_fd, PORTAL_PERM) < 0)
         die("chmod of socket failed: %m");
 
     if (listen(listen_fd, 20) < 0)
@@ -248,6 +249,6 @@ int main(int argc, char *argv[]) {
     }
 
     close(listen_fd);
-    unlink(SOCKET_NAME);
+    unlink(portal_name);
     return EXIT_SUCCESS;
 }

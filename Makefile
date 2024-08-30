@@ -1,17 +1,17 @@
-all: server client
+all: portal-spawner portal-exec
 
-SOCKET_NAME ?= server.sock
-SOCKET_PERM ?= 777
-CFLAGS      += -O2 -DSOCKET_NAME=\"${SOCKET_NAME}\" -DSOCKET_PERM=0${SOCKET_PERM}
+PORTAL_NAME ?= portal.sock
+PORTAL_PERM ?= 777
+CFLAGS      += -O2 -DPORTAL_NAME=\"${PORTAL_NAME}\" -DPORTAL_PERM=0${PORTAL_PERM}
 
-server.o: server.c shared.h
-client.o: client.c shared.h
+portal-spawner.o: portal-spawner.c shared.h
+portal-exec.o: portal-exec.c shared.h
 
-server: server.o
+portal-spawner: portal-spawner.o
 	$(CC) $^ -o $@
 
-client: client.o
+portal-exec: portal-exec.o
 	$(CC) $^ -o $@
 
 clean:
-	rm -rf server client *.o server.sock
+	rm -rf portal-spawner portal-exec *.o portal.sock

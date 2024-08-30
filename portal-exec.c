@@ -3,6 +3,8 @@
 extern char **environ;
 
 int main(int argc, char *argv[]) {
+    const char *portal_name = getenv("PORTAL_NAME") ?: PORTAL_NAME;
+    unsetenv("PORTAL_NAME");
     struct rlimit lim = { .rlim_cur = MAX_FDS, .rlim_max = MAX_FDS };
     if (setrlimit(RLIMIT_NOFILE, &lim) < 0)
         die("cannot set fd limit: %m");
@@ -25,8 +27,7 @@ int main(int argc, char *argv[]) {
     for (int i = 0; i < MAX_FDS; i++) {
         if (fcntl(i, F_GETFD) == -1)
             continue;
-        fds[num_fds] = i;
-        num_fds++;
+        fds[num_fds++] = i;
     }
 
     int server_fd = socket(AF_UNIX, SOCK_SEQPACKET, 0);
@@ -36,10 +37,10 @@ int main(int argc, char *argv[]) {
     struct sockaddr_un name;
     memset(&name, 0, sizeof(name));
     name.sun_family = AF_UNIX;
-    strncpy(name.sun_path, SOCKET_NAME, sizeof(name.sun_path) - 1);
+    strncpy(name.sun_path, portal_name, sizeof(name.sun_path) - 1);
 
     if (connect(server_fd, (const struct sockaddr *)&name, sizeof(name)) == -1)
-        die("cannot connect to server '%s': %m", SOCKET_NAME);
+        die("cannot connect to portal '%s': %m", portal_name);
 
     if (write(server_fd, buf_mem(env_buf), buf_fill(env_buf)) != buf_fill(env_buf))
         die("cannot send env: %m");
@@ -61,9 +62,9 @@ int main(int argc, char *argv[]) {
     int status;
     int ret = read(server_fd, &status, sizeof(int));
     if (ret < 0)
-        die("reading response failed: %m");
+        die("portal-spawner closed connection: %m");
     if (ret == 0)
-        die("server closed connection");
+        die("portal-spawner closed connection");
     if (ret != sizeof(int))
         die("unexpected response size");
     if (WIFEXITED(status)){
