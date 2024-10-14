@@ -4,10 +4,6 @@ void portal_setup(portal_listen_t *portal, const char *portal_name) {
     if (unlink(portal_name) < 0 && errno != ENOENT)
         die("cannot unlink existing socket %s: %m", portal_name);
 
-    struct rlimit lim = { .rlim_cur = 1024, .rlim_max = 1024 };
-    if (setrlimit(RLIMIT_NOFILE, &lim) < 0)
-        die("cannot set fd limit: %m");
-
     mode_t old = umask(0);
     int listen_fd = socket(AF_UNIX, SOCK_SEQPACKET, 0);
     if (listen_fd < 0)
@@ -26,9 +22,6 @@ void portal_setup(portal_listen_t *portal, const char *portal_name) {
     if (fchmod(listen_fd, PORTAL_PERM) < 0)
         die("chmod of socket failed: %m");
     
-    // if (fcntl(listen_fd, F_SETFL, fcntl(listen_fd, F_GETFL, 0) | O_NONBLOCK) != 0)
-    //     die("cannot set non-blocking: %m");
-
     if (listen(listen_fd, 20) < 0)
         die("listen failed: %m");
 
