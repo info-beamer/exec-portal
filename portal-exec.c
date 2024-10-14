@@ -5,6 +5,8 @@ extern char **environ;
 int main(int argc, char *argv[]) {
     const char *portal_name = getenv("PORTAL_NAME") ?: PORTAL_NAME;
     unsetenv("PORTAL_NAME");
+    int no_retry = !!getenv("PORTAL_ONE_SHOT");
+    unsetenv("PORTAL_ONE_SHOT");
     struct rlimit lim = { .rlim_cur = MAX_FDS, .rlim_max = MAX_FDS };
     if (setrlimit(RLIMIT_NOFILE, &lim) < 0)
         die("cannot set fd limit: %m");
@@ -39,8 +41,16 @@ int main(int argc, char *argv[]) {
     name.sun_family = AF_UNIX;
     strncpy(name.sun_path, portal_name, sizeof(name.sun_path) - 1);
 
-    if (connect(server_fd, (const struct sockaddr *)&name, sizeof(name)) == -1)
-        die("cannot connect to portal '%s': %m", portal_name);
+retry:
+    if (connect(server_fd, (const struct sockaddr *)&name, sizeof(name)) == -1) {
+        if (no_retry) {
+            die("cannot connect to portal '%s': %m", portal_name);
+        } else {
+            fprintf(stderr, "waiting for '%s'..\n", portal_name);
+            sleep(1);
+            goto retry;
+        }
+    }
 
     if (write(server_fd, buf_mem(env_buf), buf_fill(env_buf)) != buf_fill(env_buf))
         die("cannot send env: %m");
