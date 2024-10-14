@@ -1,4 +1,4 @@
-#include "shared.h"
+#include "portal-shared.h"
 
 extern char **environ;
 

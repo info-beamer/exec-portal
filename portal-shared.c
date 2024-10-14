@@ -1,36 +1,4 @@
-#define _GNU_SOURCE
-#include <assert.h>
-#include <errno.h>
-#include <fcntl.h>
-#include <poll.h>
-#include <stdarg.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include <sys/socket.h>
-#include <sys/stat.h>
-#include <sys/syscall.h>
-#include <sys/types.h>
-#include <sys/un.h>
-#include <sys/wait.h>
-#include <sys/time.h>
-#include <sys/resource.h>
-
-
-#ifndef PORTAL_NAME
-#define PORTAL_NAME "portal.sock"
-#endif
-
-#ifndef SOCKET_PERM
-#define SOCKET_PERM 0777
-#endif
-
-#define MAX_BUF_SIZE 65536
-#define MAX_FDS 256
-#define MAX_ARGS 1024
-#define MAX_ENVS 1024
+#include "portal-shared.h"
 
 void die(const char *fmt, ...) {
     va_list ap;
@@ -45,20 +13,14 @@ void die(const char *fmt, ...) {
 #endif
 }
 
-typedef struct {
-    int size;
-    int fill;
-    char buf[];
-} buf_t;
-
-static buf_t *buf_alloc(int size) {
+buf_t *buf_alloc(int size) {
     buf_t *buf = malloc(sizeof(buf_t) + size);
     buf->size = size;
     buf->fill = 0;
     return buf;
 }
 
-static int buf_read(buf_t *buf, int fd) {
+int buf_read(buf_t *buf, int fd) {
     int max_read = buf->size - buf->fill;
     int received = read(fd, buf->buf + buf->fill, max_read);
     if (received < 0)
@@ -67,7 +29,7 @@ static int buf_read(buf_t *buf, int fd) {
     return received;
 }
 
-static int buf_append(buf_t *buf, const char *str) {
+int buf_append(buf_t *buf, const char *str) {
     int str_len = strlen(str);
     if (buf->fill + str_len + 1 >= buf->size)
         return 0;
@@ -77,21 +39,21 @@ static int buf_append(buf_t *buf, const char *str) {
     return 1;
 }
 
-static char *buf_mem(buf_t *buf) {
+char *buf_mem(buf_t *buf) {
     return buf->buf;
 }
 
-static int buf_fill(buf_t *buf) {
+int buf_fill(buf_t *buf) {
     return buf->fill;
 }
 
-static const char *buf_iter_first(buf_t *buf) {
+const char *buf_iter_first(buf_t *buf) {
     if (buf->fill == 0)
         return NULL;
     return buf->buf;
 }
 
-static const char *buf_iter_next(buf_t *buf, const char *last) {
+const char *buf_iter_next(buf_t *buf, const char *last) {
     if (last && (last < buf->buf || last >= buf->buf + buf->fill))
         return NULL;
     int offset = last - buf->buf;
@@ -103,10 +65,11 @@ static const char *buf_iter_next(buf_t *buf, const char *last) {
     return NULL;
 }
 
-#define buf_iter(buf, it) \
-    const char *it = buf_iter_first(buf); it; it = buf_iter_next(buf, it)
+void buf_free(buf_t *buf) {
+    free(buf);
+}
 
-static int send_fds(int unix_sock, int *fds, int nfds) {
+int send_fds(int unix_sock, int *fds, int nfds) {
     struct iovec iov = {
         .iov_base = ":)",
         .iov_len = 2
@@ -136,7 +99,7 @@ static int send_fds(int unix_sock, int *fds, int nfds) {
     return sendmsg(unix_sock, &msg, 0) >= 0;
 }
 
-static int recv_fds(int unix_sock, int *fds, int nfds) {
+int recv_fds(int unix_sock, int *fds, int nfds) {
     char buf[2];
     struct iovec iov = {.iov_base = buf, .iov_len = sizeof(buf)};
     
